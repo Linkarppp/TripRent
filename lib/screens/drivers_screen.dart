@@ -1,33 +1,36 @@
 import 'package:flutter/material.dart';
 import '../data/mock_database.dart';
 import '../theme/app_theme.dart';
+import '../widgets/whatsapp_helper.dart';
 
 class DriversScreen extends StatelessWidget {
   const DriversScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final drivers = TripRentStore.instance.drivers;
-
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Tim Sopir Profesional'),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        itemCount: drivers.length,
-        itemBuilder: (ctx, idx) {
-          final driver = drivers[idx];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AppTheme.cardColor,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppTheme.cardBorder),
-              boxShadow: [
-                BoxShadow(
+      body: ListenableBuilder(
+        listenable: TripRentStore.instance,
+        builder: (context, _) {
+          final drivers = TripRentStore.instance.drivers;
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+            itemCount: drivers.length,
+            itemBuilder: (ctx, idx) {
+              final driver = drivers[idx];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: AppTheme.cardBorder),
+                  boxShadow: [
+                    BoxShadow(
                   color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
@@ -145,9 +148,7 @@ class DriversScreen extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Menghubungi ${driver.nama} (${driver.noHp})...')),
-                          );
+                          WhatsAppHelper.contactDriver(driverName: driver.nama);
                         },
                         icon: const Icon(Icons.chat_outlined, size: 16),
                         label: const Text('WhatsApp', style: TextStyle(fontSize: 12)),
@@ -163,9 +164,7 @@ class DriversScreen extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Memulai panggilan ke ${driver.nama}...')),
-                          );
+                          WhatsAppHelper.callCS();
                         },
                         icon: const Icon(Icons.call, size: 16),
                         label: const Text('Panggil Sopir', style: TextStyle(fontSize: 12)),
@@ -183,7 +182,9 @@ class DriversScreen extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }

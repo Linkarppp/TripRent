@@ -30,7 +30,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const FleetScreen(),
       const OrdersScreen(),
       const DriversScreen(),
-      const ProfileScreen(),
+      ProfileScreen(onNavigateTab: _onTabSelected),
     ];
 
     return Scaffold(
@@ -41,13 +41,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface.withValues(alpha: 0.96),
+          color: Colors.white,
           border: const Border(
             top: BorderSide(color: AppTheme.cardBorder, width: 1),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.08),
               blurRadius: 16,
               offset: const Offset(0, -4),
             ),
@@ -82,7 +82,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary.withValues(alpha: 0.15) : Colors.transparent,
+          color: isSelected ? AppTheme.primaryLight.withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -121,7 +121,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primary.withValues(alpha: 0.15) : Colors.transparent,
+              color: isSelected ? AppTheme.primaryLight.withValues(alpha: 0.12) : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(

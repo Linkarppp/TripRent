@@ -14,15 +14,19 @@ class Formatters {
     return _currencyFormat.format(amount);
   }
 
-  static String date(DateTime date) {
+  static String date(DateTime dt) {
     try {
-      return _dateFormat.format(date);
+      return _dateFormat.format(dt);
     } catch (_) {
-      return '${date.day}/${date.month}/${date.year}';
+      return '${dt.day}/${dt.month}/${dt.year}';
     }
   }
 
-  static String dateShort(DateTime date) {
-    return _dateShortFormat.format(date);
+  static String dateShort(DateTime dt) {
+    return _dateShortFormat.format(dt);
+  }
+
+  static String dateMedium(DateTime dt) {
+    return date(dt);
   }
 }

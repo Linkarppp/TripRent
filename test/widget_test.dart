@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:trip_rent/main.dart';
 
 // 1x1 transparent png
@@ -71,6 +72,7 @@ class _TestHttpOverrides extends HttpOverrides {
 
 void main() {
   setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
     HttpOverrides.global = _TestHttpOverrides();
   });
 

@@ -8,6 +8,7 @@ class CarCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onBook;
   final bool isFeatured;
+  final bool isHorizontal;
 
   const CarCard({
     super.key,
@@ -15,16 +16,159 @@ class CarCard extends StatelessWidget {
     required this.onTap,
     required this.onBook,
     this.isFeatured = false,
+    this.isHorizontal = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (isHorizontal) {
+      return _buildHorizontalCard(context);
+    }
     if (isFeatured) {
       return _buildFeaturedCard(context);
     }
     return _buildStandardCard(context);
   }
 
+  // --- HORIZONTAL CARD (Matching Screen 5: "Hasil Pencarian") ---
+  Widget _buildHorizontalCard(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.cardBorder),
+          boxShadow: AppTheme.cardShadow,
+        ),
+        child: Row(
+          children: [
+            // Car Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 104,
+                height: 80,
+                color: AppTheme.surfaceLight,
+                child: Image.network(
+                  car.gambarUtama,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    color: AppTheme.surfaceLight,
+                    child: const Icon(Icons.directions_car_filled, color: AppTheme.textMuted, size: 36),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Car Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    car.nama,
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+
+                  // Rating Badge
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
+                      const SizedBox(width: 3),
+                      Text(
+                        car.rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '(2.5k ulasan)',
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+
+                  // Specs (Kursi & Transmisi)
+                  Row(
+                    children: [
+                      Icon(Icons.people_alt_outlined, size: 13, color: AppTheme.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        car.kapasitas,
+                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(Icons.tune_rounded, size: 13, color: AppTheme.textSecondary),
+                      const SizedBox(width: 4),
+                      Text(
+                        car.transmisi,
+                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Price
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        Formatters.rupiah(car.hargaSewa),
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Text(
+                        ' /hari',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Chevron Arrow
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary, size: 20),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- STANDARD CARD (Vertical Luxury Card) ---
   Widget _buildStandardCard(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
@@ -33,14 +177,8 @@ class CarCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.cardColor,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppTheme.cardBorder, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          border: Border.all(color: AppTheme.cardBorder),
+          boxShadow: AppTheme.cardShadow,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -62,43 +200,10 @@ class CarCard extends StatelessWidget {
                         return Container(
                           color: AppTheme.surfaceLight,
                           child: const Center(
-                            child: Icon(Icons.directions_car_filled,
-                                size: 64, color: AppTheme.textMuted),
+                            child: Icon(Icons.directions_car_filled, size: 64, color: AppTheme.textMuted),
                           ),
                         );
                       },
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return Container(
-                          color: AppTheme.surfaceLight,
-                          child: const Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppTheme.primaryLight,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                // Gradient Overlay
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          AppTheme.cardColor.withValues(alpha: 0.95),
-                        ],
-                        stops: const [0.6, 1.0],
-                      ),
                     ),
                   ),
                 ),
@@ -109,17 +214,24 @@ class CarCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppTheme.background.withValues(alpha: 0.85),
+                      color: AppTheme.cardColor.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: AppTheme.cardBorder),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Text(
                       car.category,
                       style: const TextStyle(
                         color: AppTheme.primaryLight,
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ),
@@ -131,19 +243,25 @@ class CarCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.8),
+                      color: Colors.white.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.warning.withValues(alpha: 0.5)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded, color: AppTheme.warning, size: 16),
+                        const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 16),
                         const SizedBox(width: 4),
                         Text(
                           car.rating.toStringAsFixed(1),
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppTheme.textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -169,7 +287,7 @@ class CarCard extends StatelessWidget {
                           car.nama,
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                             letterSpacing: -0.3,
                           ),
@@ -182,13 +300,14 @@ class CarCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppTheme.surfaceLight,
                           borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppTheme.cardBorder),
                         ),
                         child: Text(
                           'Tahun ${car.tahun}',
                           style: const TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 11,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -202,7 +321,7 @@ class CarCard extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       _buildSpecPill(Icons.people_outline, car.kapasitas),
-                      _buildSpecPill(Icons.speed_outlined, car.mesin),
+                      _buildSpecPill(Icons.tune_outlined, car.transmisi),
                       _buildSpecPill(Icons.local_gas_station_outlined, car.termasuk),
                     ],
                   ),
@@ -255,8 +374,7 @@ class CarCard extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
                           foregroundColor: Colors.white,
-                          elevation: 4,
-                          shadowColor: AppTheme.primary.withValues(alpha: 0.5),
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -287,146 +405,104 @@ class CarCard extends StatelessWidget {
     );
   }
 
+  // --- FEATURED CARD (Horizontal Carousel for "Mobil Populer" on Home Screen) ---
   Widget _buildFeaturedCard(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 280,
-        margin: const EdgeInsets.only(right: 16),
+        width: 190,
+        margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
           color: AppTheme.cardColor,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppTheme.cardBorder, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.cardBorder),
+          boxShadow: AppTheme.cardShadow,
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              children: [
-                Hero(
-                  tag: 'car-featured-img-${car.id}',
-                  child: Image.network(
+            // Car Image
+            SizedBox(
+              height: 95,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
                     car.gambarUtama,
-                    height: 150,
-                    width: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      height: 150,
                       color: AppTheme.surfaceLight,
                       child: const Center(
-                        child: Icon(Icons.directions_car, color: AppTheme.textMuted, size: 48),
+                        child: Icon(Icons.directions_car, color: AppTheme.textMuted, size: 36),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accent.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.local_fire_department, color: Colors.white, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'HOT',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star, color: Color(0xFFF59E0B), size: 11),
+                          const SizedBox(width: 2),
+                          Text(
+                            car.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.star, color: AppTheme.warning, size: 14),
-                        const SizedBox(width: 3),
-                        Text(
-                          car.rating.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     car.nama,
                     style: const TextStyle(
                       color: AppTheme.textPrimary,
-                      fontSize: 16,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    '${car.kapasitas} • ${car.mesin}',
+                    '${car.kapasitas} • ${car.transmisi}',
                     style: const TextStyle(
                       color: AppTheme.textSecondary,
-                      fontSize: 12,
+                      fontSize: 10.5,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        Formatters.rupiah(car.hargaSewa),
-                        style: const TextStyle(
-                          color: AppTheme.primaryLight,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward,
-                          color: AppTheme.primaryLight,
-                          size: 16,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 6),
+                  Text(
+                    '${Formatters.rupiah(car.hargaSewa)} /hari',
+                    style: const TextStyle(
+                      color: AppTheme.primaryLight,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -441,9 +517,9 @@ class CarCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceLight.withValues(alpha: 0.8),
+        color: AppTheme.surfaceLight,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.cardBorder.withValues(alpha: 0.6)),
+        border: Border.all(color: AppTheme.cardBorder),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

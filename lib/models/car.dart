@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Car {
   final int id;
   final String nama;
@@ -83,5 +85,71 @@ class Car {
       transmisi: transmisi ?? this.transmisi,
       detailImages: detailImages ?? this.detailImages,
     );
+  }
+}
+
+class CarCategory {
+  static const String all = 'Semua';
+  static const String keluarga = 'Mobil Keluarga (7 Kursi)';
+  static const String eksekutif = 'Eksekutif & Nyaman';
+  static const String tangguh = 'Tangguh Segala Medan';
+  static const String rombongan = 'Rombongan (12-19 Kursi)';
+  static const String mewah = 'Mewah & VIP';
+  static const String hemat = 'Hemat & Lincah (5 Kursi)';
+
+  static const List<String> list = [
+    keluarga,
+    eksekutif,
+    tangguh,
+    rombongan,
+    mewah,
+    hemat,
+  ];
+
+  static const List<String> filterList = [
+    all,
+    keluarga,
+    eksekutif,
+    tangguh,
+    rombongan,
+    mewah,
+    hemat,
+  ];
+
+  /// Normalisasi nama kategori lama atau teknis ke format yang mudah dipahami
+  static String normalize(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return keluarga;
+    final r = raw.toLowerCase().trim();
+    if (r == all.toLowerCase()) return all;
+    if (r.contains('mpv keluarga') || r == 'mpv' || (r.contains('keluarga') && !r.contains('medium'))) {
+      return keluarga;
+    }
+    if (r.contains('medium mpv') || r.contains('innova') || r.contains('eksekutif')) {
+      return eksekutif;
+    }
+    if (r.contains('suv') || r.contains('tangguh') || r.contains('medan')) {
+      return tangguh;
+    }
+    if (r.contains('minibus') || r.contains('elf') || r.contains('hiace') || r.contains('rombongan')) {
+      return rombongan;
+    }
+    if (r.contains('luxury') || r.contains('vip') || r.contains('mewah') || r.contains('alphard')) {
+      return mewah;
+    }
+    if (r.contains('city') || r.contains('hemat') || r.contains('brio') || r.contains('lincah')) {
+      return hemat;
+    }
+    return raw;
+  }
+
+  static IconData getCategoryIcon(String category) {
+    final cat = normalize(category);
+    if (cat == keluarga) return Icons.groups_rounded;
+    if (cat == eksekutif) return Icons.airline_seat_recline_extra_rounded;
+    if (cat == tangguh) return Icons.terrain_rounded;
+    if (cat == rombongan) return Icons.directions_bus_rounded;
+    if (cat == mewah) return Icons.workspace_premium_rounded;
+    if (cat == hemat) return Icons.electric_car_rounded;
+    return Icons.directions_car_rounded;
   }
 }

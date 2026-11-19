@@ -5,14 +5,18 @@ import '../models/order.dart';
 import '../data/mock_database.dart';
 import '../theme/app_theme.dart';
 import '../widgets/formatters.dart';
+import '../widgets/location_autocomplete_field.dart';
+import '../widgets/payment_method_selector.dart';
 
 class BookingSheet extends StatefulWidget {
   final Car car;
+  final bool? initialUseDriver;
   final Function(RentalOrder createdOrder)? onBookingConfirmed;
 
   const BookingSheet({
     super.key,
     required this.car,
+    this.initialUseDriver,
     this.onBookingConfirmed,
   });
 
@@ -25,15 +29,12 @@ class _BookingSheetState extends State<BookingSheet> {
 
   late DateTime _startDate;
   late DateTime _endDate;
-  bool _useDriver = true;
+  late bool _useDriver;
   Driver? _selectedDriver;
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Rahmat Hidayat');
-  final TextEditingController _phoneController =
-      TextEditingController(text: '0812-3456-7890');
-  final TextEditingController _emailController =
-      TextEditingController(text: 'rahmat.hidayat@example.com');
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _emailController;
   final TextEditingController _pickupController =
       TextEditingController(text: 'Bandara Internasional Minangkabau (BIM)');
   final TextEditingController _destinationController =
@@ -41,21 +42,37 @@ class _BookingSheetState extends State<BookingSheet> {
   final TextEditingController _notesController =
       TextEditingController(text: 'Mohon siapkan mobil dalam kondisi bersih.');
 
-  late String _selectedBank;
+  PaymentSelection _selectedPayment = const PaymentSelection(
+    category: 'Transfer Bank',
+    channel: 'BCA',
+    accountNumber: '1234567890',
+    accountHolder: 'TripRent',
+    instructions: 'Transfer ke rekening BCA di atas, lalu konfirmasi pembayaran.',
+  );
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialUseDriver != null) {
+      _useDriver = widget.initialUseDriver!;
+    } else {
+      final termasukLower = widget.car.termasuk.toLowerCase();
+      final includesDriver = termasukLower.contains('supir') ||
+          termasukLower.contains('sopir') ||
+          termasukLower.contains('driver');
+      // Jika keterangan mobil "Mobil Saja" / "Lepas Kunci", jangan auto-aktifkan sopir
+      _useDriver = includesDriver;
+    }
+    final user = TripRentStore.instance.currentUser;
+    _nameController = TextEditingController(text: user?.namaLengkap ?? '');
+    _phoneController = TextEditingController(text: user?.noTelp ?? '');
+    _emailController = TextEditingController(text: user?.email ?? '');
     _startDate = DateTime.now().add(const Duration(days: 1));
     _endDate = _startDate.add(Duration(days: widget.car.durasi));
     final drivers = TripRentStore.instance.drivers;
     if (drivers.isNotEmpty) {
       _selectedDriver = drivers.first;
     }
-    final banks = TripRentStore.instance.companyProfile.bankAccounts;
-    _selectedBank = banks.isNotEmpty
-        ? '${banks.first.namaBank} - ${banks.first.noRekening}'
-        : 'Bank BCA (0320943647)';
   }
 
   @override
@@ -134,7 +151,12 @@ class _BookingSheetState extends State<BookingSheet> {
       sewaPerhari: widget.car.hargaSewa,
       totalHari: _rentalDays,
       totalHarga: _totalCost,
-      bankPembayaran: _selectedBank,
+      bankPembayaran: '${_selectedPayment.category} (${_selectedPayment.channel})',
+      userId: TripRentStore.instance.currentUser?.id ?? 'guest',
+      driverId: _useDriver ? _selectedDriver?.id : null,
+      driverTaskStatus: 'Menunggu Konfirmasi',
+      paymentStatus: 'Menunggu Verifikasi',
+      paymentMethodType: _selectedPayment.category,
     );
 
     TripRentStore.instance.addOrder(newOrder);
@@ -161,39 +183,64 @@ class _BookingSheetState extends State<BookingSheet> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              const SizedBox(height: 10),
               Container(
-                width: 68,
-                height: 68,
+                width: 76,
+                height: 76,
                 decoration: BoxDecoration(
-                  color: AppTheme.success.withValues(alpha: 0.15),
+                  color: AppTheme.primaryLight,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryLight.withValues(alpha: 0.35),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
                 child: const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppTheme.success,
-                  size: 44,
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 48,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               const Text(
-                'Pemesanan Berhasil!',
+                'Pesanan Berhasil!',
                 style: TextStyle(
                   color: AppTheme.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Kode Transaksi:\n${order.kodeOrders}',
+              const Text(
+                'Terima kasih telah menggunakan TripRent. Detail pesanan telah dikirim melalui email dan WhatsApp.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTheme.primaryLight,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 12.5,
+                  height: 1.4,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceLight,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.cardBorder),
+                ),
+                child: Text(
+                  'No. Transaksi: ${order.kodeOrders}',
+                  style: const TextStyle(
+                    color: AppTheme.primaryLight,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -210,15 +257,6 @@ class _BookingSheetState extends State<BookingSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              Text(
-                'Silakan transfer ke ${order.bankPembayaran} untuk konfirmasi pembayaran.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 11,
-                ),
-              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -226,12 +264,30 @@ class _BookingSheetState extends State<BookingSheet> {
                   onPressed: () => Navigator.pop(ctx),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text('Lihat Pesanan', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    side: const BorderSide(color: AppTheme.cardBorder),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text('Tutup & Cek Pesanan'),
+                  child: const Text('Kembali ke Beranda', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -296,7 +352,28 @@ class _BookingSheetState extends State<BookingSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
+
+                  // Title Bar (Screen 7 Reference)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Ringkasan Pesanan',
+                        style: TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 22),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
 
                   // Header with Car Summary
                   Row(
@@ -331,7 +408,9 @@ class _BookingSheetState extends State<BookingSheet> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${Formatters.rupiah(widget.car.hargaSewa)} /hari • ${widget.car.termasuk}',
+                              _useDriver
+                                  ? '${Formatters.rupiah(widget.car.hargaSewa + widget.car.hargaSopir)} /hari • Mobil + Sopir'
+                                  : '${Formatters.rupiah(widget.car.hargaSewa)} /hari • ${widget.car.termasuk.toLowerCase().contains("mobil saja") ? "Mobil Saja (Lepas Kunci)" : widget.car.termasuk}',
                               style: const TextStyle(
                                 color: AppTheme.primaryLight,
                                 fontSize: 12,
@@ -408,25 +487,55 @@ class _BookingSheetState extends State<BookingSheet> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Gunakan Jasa Sopir',
-                            style: TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  'Gunakan Jasa Sopir',
+                                  style: TextStyle(
+                                    color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _useDriver
+                                        ? AppTheme.primary.withValues(alpha: 0.15)
+                                        : AppTheme.cardColor,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: _useDriver ? AppTheme.primaryLight : AppTheme.cardBorder,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _useDriver ? 'Aktif' : 'Lepas Kunci',
+                                    style: TextStyle(
+                                      color: _useDriver ? AppTheme.primaryLight : AppTheme.textMuted,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Text(
-                            '+ ${Formatters.rupiah(widget.car.hargaSopir)} /hari (Sopir Berpengalaman)',
-                            style: const TextStyle(
-                              color: AppTheme.textMuted,
-                              fontSize: 11,
+                            const SizedBox(height: 2),
+                            Text(
+                              _useDriver
+                                  ? '+ ${Formatters.rupiah(widget.car.hargaSopir)} /hari (Sopir Berpengalaman)'
+                                  : 'Opsional (+ ${Formatters.rupiah(widget.car.hargaSopir)} /hari jika ingin sopir)',
+                              style: const TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       Switch.adaptive(
                         value: _useDriver,
@@ -508,66 +617,30 @@ class _BookingSheetState extends State<BookingSheet> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _buildInputField('Lokasi Penjemputan', _pickupController, Icons.location_on_outlined),
+                  LocationAutocompleteField(
+                    label: 'Lokasi Penjemputan',
+                    controller: _pickupController,
+                    icon: Icons.location_on_outlined,
+                    hintText: 'Contoh: Indramayu, Bandara BIM, Hotel...',
+                  ),
                   const SizedBox(height: 10),
-                  _buildInputField('Lokasi Tujuan', _destinationController, Icons.flag_outlined),
+                  LocationAutocompleteField(
+                    label: 'Lokasi Tujuan',
+                    controller: _destinationController,
+                    icon: Icons.flag_outlined,
+                    hintText: 'Contoh: Padang, Bukittinggi, Jakarta...',
+                  ),
                   const SizedBox(height: 10),
                   _buildInputField('Catatan Khusus (Opsional)', _notesController, Icons.notes_outlined, maxLines: 2),
 
                   const SizedBox(height: 20),
-                  // Payment Bank Selector
-                  const Text(
-                    'Pilihan Rekening Pembayaran',
-                    style: TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                  // Payment Method Selector
+                  PaymentMethodSelector(
+                    initialSelection: _selectedPayment,
+                    onSelectionChanged: (sel) {
+                      setState(() => _selectedPayment = sel);
+                    },
                   ),
-                  const SizedBox(height: 8),
-                  ...TripRentStore.instance.companyProfile.bankAccounts.map((b) {
-                    final desc = '${b.namaBank} - ${b.noRekening} (a/n ${b.pemilik})';
-                    final isSel = _selectedBank == desc;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedBank = desc),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSel ? AppTheme.primary.withValues(alpha: 0.15) : AppTheme.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSel ? AppTheme.primaryLight : AppTheme.cardBorder,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isSel ? Icons.radio_button_checked : Icons.radio_button_off,
-                              color: isSel ? AppTheme.primaryLight : AppTheme.textMuted,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    b.namaBank,
-                                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
-                                  ),
-                                  Text(
-                                    '${b.noRekening} a/n ${b.pemilik}',
-                                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
 
                   const SizedBox(height: 16),
                   const Divider(color: AppTheme.cardBorder),
@@ -614,7 +687,7 @@ class _BookingSheetState extends State<BookingSheet> {
 
                   const SizedBox(height: 24),
 
-                  // Submit Button
+                  // Submit Button (Screen 7 & 8 Reference)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -626,16 +699,15 @@ class _BookingSheetState extends State<BookingSheet> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        elevation: 6,
-                        shadowColor: AppTheme.primary.withValues(alpha: 0.5),
+                        elevation: 0,
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_circle_outline, size: 20),
+                          Icon(Icons.payment_rounded, size: 18),
                           SizedBox(width: 8),
                           Text(
-                            'Konfirmasi & Buat Pesanan',
+                            'Lanjut ke Pembayaran',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,

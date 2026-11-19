@@ -3,6 +3,8 @@ import '../data/mock_database.dart';
 import '../models/order.dart';
 import '../theme/app_theme.dart';
 import '../widgets/formatters.dart';
+import '../widgets/shuttle_eticket_card.dart';
+import '../widgets/payment_checkout_dialog.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -48,19 +50,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
               _dialogRow('Pemesan', order.namaPemesan),
               _dialogRow('No. Telpon', order.noTelpon),
               _dialogRow('Email', order.email),
-              _dialogRow('Mobil', order.car.nama),
-              _dialogRow('Layanan', order.pakaiSopir ? 'Dengan Sopir (${order.driver?.nama ?? "Driver"})' : 'Lepas Kunci'),
-              _dialogRow('Periode', '${Formatters.dateShort(order.dariTanggal)} - ${Formatters.dateShort(order.sampaiTanggal)} (${order.totalHari} Hari)'),
+              _dialogRow(order.isTicket ? 'Jenis Tiket' : 'Mobil', order.isTicket ? (order.ticketTitle ?? order.car.nama) : order.car.nama),
+              _dialogRow('Layanan', order.isTicket ? 'Tiket Shuttle / Travel' : (order.pakaiSopir ? 'Dengan Sopir (${order.driver?.nama ?? "Driver"})' : 'Lepas Kunci')),
+              _dialogRow(order.isTicket ? 'Tanggal Berangkat' : 'Periode', order.isTicket ? Formatters.dateShort(order.dariTanggal) : '${Formatters.dateShort(order.dariTanggal)} - ${Formatters.dateShort(order.sampaiTanggal)} (${order.totalHari} Hari)'),
               _dialogRow('Penjemputan', order.jemput),
               _dialogRow('Tujuan', order.tujuan),
               if (order.keterangan.isNotEmpty) _dialogRow('Catatan', order.keterangan),
               const Divider(color: AppTheme.cardBorder, height: 20),
               _dialogRow('Rekening', order.bankPembayaran),
+              _dialogRow('Status Bayar', order.paymentStatus),
+              if (order.pakaiSopir)
+                _dialogRow(
+                  'Status Supir',
+                  order.driver != null
+                      ? '${order.driver!.nama} (${order.driverTaskStatus})'
+                      : 'Menunggu Penugasan Sopir',
+                ),
               _dialogRow('Total Tagihan', Formatters.rupiah(order.totalHarga), isBold: true),
             ],
           ),
         ),
         actions: [
+          if (order.isTicket && order.paymentStatus == 'Lunas')
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                showShuttleETicketModal(context, order);
+              },
+              icon: const Icon(Icons.confirmation_num_rounded, size: 16),
+              label: const Text('Lihat E-Tiket'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Tutup', style: TextStyle(color: AppTheme.primaryLight)),
@@ -134,7 +157,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return ListenableBuilder(
       listenable: TripRentStore.instance,
       builder: (context, _) {
-        final allOrders = TripRentStore.instance.orders;
+        final allOrders = TripRentStore.instance.userOrders;
         final filteredOrders = _selectedStatus == 'Semua'
             ? allOrders
             : allOrders.where((o) => o.status.toLowerCase() == _selectedStatus.toLowerCase()).toList();
@@ -221,13 +244,56 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      order.kodeOrders,
-                                      style: const TextStyle(
-                                        color: AppTheme.primaryLight,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          order.kodeOrders,
+                                          style: const TextStyle(
+                                            color: AppTheme.primaryLight,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: (order.paymentStatus == 'Lunas' ? AppTheme.success : AppTheme.warning).withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                order.paymentStatus,
+                                                style: TextStyle(
+                                                  color: order.paymentStatus == 'Lunas' ? AppTheme.success : AppTheme.warning,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            if (order.pakaiSopir) ...[
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.primaryLight.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  order.driver != null ? order.driver!.nama : 'Cari Sopir',
+                                                  style: const TextStyle(
+                                                    color: AppTheme.primaryLight,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                     _buildStatusBadge(order.status),
                                   ],
@@ -260,7 +326,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            order.car.nama,
+                                            order.isTicket ? (order.ticketTitle ?? order.car.nama) : order.car.nama,
                                             style: const TextStyle(
                                               color: AppTheme.textPrimary,
                                               fontSize: 15,
@@ -371,17 +437,57 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         ),
                                       ],
                                     ),
-                                    OutlinedButton(
-                                      onPressed: () => _showInvoiceDialog(order),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppTheme.primaryLight,
-                                        side: const BorderSide(color: AppTheme.cardBorder),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(10),
+                                    Wrap(
+                                      spacing: 6,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      children: [
+                                        OutlinedButton(
+                                          onPressed: () => _showInvoiceDialog(order),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: AppTheme.textSecondary,
+                                            side: const BorderSide(color: AppTheme.cardBorder),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                          ),
+                                          child: const Text('Invoice', style: TextStyle(fontSize: 11)),
                                         ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                      ),
-                                      child: const Text('Detail Invoice', style: TextStyle(fontSize: 12)),
+                                        if (order.isTicket && order.paymentStatus == 'Lunas') ...[
+                                          ElevatedButton.icon(
+                                            onPressed: () => showShuttleETicketModal(context, order),
+                                            icon: const Icon(Icons.confirmation_num_rounded, size: 14),
+                                            label: const Text('Lihat E-Tiket', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppTheme.primary,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                              elevation: 0,
+                                            ),
+                                          ),
+                                        ] else if (order.paymentStatus != 'Lunas') ...[
+                                          ElevatedButton.icon(
+                                            onPressed: () => showPaymentCheckoutDialog(
+                                              context: context,
+                                              order: order,
+                                            ),
+                                            icon: const Icon(Icons.payment_rounded, size: 14),
+                                            label: const Text('Bayar Sekarang', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppTheme.success,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                              elevation: 0,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ],
                                 ),
